@@ -16,9 +16,11 @@ func ProcessCSV(csvLocation string) ([]string, [][]string) {
 		fmt.Printf("Error opening CSV file. Error: %v\n", err)
 		os.Exit(2)
 	}
+
 	// Read the CSV
 	reader := csv.NewReader(file)
 	records, _ := reader.ReadAll()
+
 	// These fields are required for the built-in SQL queries to work
 	// Check for the presence of each required field and log any missing fields
 	requiredFields := []string{
@@ -42,9 +44,13 @@ func ProcessCSV(csvLocation string) ([]string, [][]string) {
 			os.Exit(1)
 		}
 	}
+
+	// Pull out the header values
+	headers := records[0]
 	// Strip down the CSV to only include required fields
+	strippedRecords := deleteHeader(records)
 	// Return the headers and CSV values
-	return requiredFields, records
+	return headers, strippedRecords
 }
 
 func checkRequiredFields(requiredField string, headers []string) bool {
@@ -54,4 +60,10 @@ func checkRequiredFields(requiredField string, headers []string) bool {
 		}
 	}
 	return false
+}
+
+func deleteHeader(records [][]string) [][]string {
+	copy(records[0:], records[1:])
+	records = records[:len(records)-1]
+	return records
 }
