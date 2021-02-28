@@ -25,7 +25,7 @@ func CreateTable(dbLocation string, tableName string, values []string) {
 	headers := structureHeaders(values)
 
 	// Create the table
-	createTableQuery := `CREATE TABLE IF NOT EXISTS ` + tableName + `(` + headers + `)`
+	createTableQuery := `CREATE TABLE IF NOT EXISTS '` + tableName + `'(` + headers + `)`
 	tableQuery, err := database.Prepare(createTableQuery)
 	if err != nil {
 		fmt.Printf("Improper SQL Query. Error: %v\n", err)
@@ -56,6 +56,7 @@ func InsertDB(dbLocation string, tableName string, headers []string, values [][]
 		valueString = valueString + ", ?"
 		count++
 	}
+	tableName = "'" + tableName + "'"
 	insertValueQuery = fmt.Sprintf(insertValueQuery, tableName, headersString, valueString)
 
 	// Insert the data
@@ -80,7 +81,7 @@ func InsertDB(dbLocation string, tableName string, headers []string, values [][]
 }
 
 // RunQueries runs all queries on the sql database and returns a map of results
-func RunQueries(dbLocation string, tableName string) {
+func RunQueries(dbLocation string, tableName string) ([]string, [][]string, [][]string, []string, [][]string) {
 	// Open the SQLite DB at the provided location
 	database, err := sql.Open("sqlite3", dbLocation)
 	// Handle any errors opening the DB
@@ -88,9 +89,13 @@ func RunQueries(dbLocation string, tableName string) {
 		fmt.Printf("Error opening SQLite DB File. Error: %v\n", err)
 		os.Exit(2)
 	}
-	vulnBySeverity(database, tableName)
-	topTenVulnHosts(database, tableName)
-	mostDangerousVulns(database, tableName)
+	tableName = "'" + tableName + "'"
+	vulnBySeverity := vulnBySeverity(database, tableName)
+	topTenVulnHosts := topTenVulnHosts(database, tableName)
+	mostDangerousVulns := mostDangerousVulns(database, tableName)
+	vulnByType := vulnByType(database, tableName)
+	countCVSSYear := countCVSSYear(database, tableName)
+	return vulnBySeverity, topTenVulnHosts, mostDangerousVulns, vulnByType, countCVSSYear
 }
 
 func structureHeaders(headers []string) string {
@@ -100,13 +105,13 @@ func structureHeaders(headers []string) string {
 	return headersString
 }
 
-func vulnBySeverity(conn *sql.DB, tableName string) {
+func vulnBySeverity(conn *sql.DB, tableName string) []string {
 	// Run the first query
-	var criticalTotal int
-	var severeTotal int
-	var highTotal int
-	var mediumTotal int
-	var lowTotal int
+	var criticalTotal string
+	var severeTotal string
+	var highTotal string
+	var mediumTotal string
+	var lowTotal string
 	query := `
 	SELECT
 	(SELECT COUNT(*) FROM !! WHERE CVSS = 10) AS Critical,
@@ -123,19 +128,20 @@ func vulnBySeverity(conn *sql.DB, tableName string) {
 	}
 	for rows.Next() {
 		rows.Scan(&criticalTotal, &severeTotal, &highTotal, &mediumTotal, &lowTotal)
-		fmt.Println(criticalTotal, severeTotal, highTotal, mediumTotal, lowTotal)
 	}
+	results := []string{criticalTotal, severeTotal, highTotal, mediumTotal, lowTotal}
+	return results
 }
 
-func topTenVulnHosts(conn *sql.DB, tableName string) {
+func topTenVulnHosts(conn *sql.DB, tableName string) [][]string {
 	// Run the second query
 	var mostVulnHost string
-	var cvssTotal int
-	var criticalTotal int
-	var severeTotal int
-	var highTotal int
-	var mediumTotal int
-	var lowTotal int
+	var cvssTotal string
+	var criticalTotal string
+	var severeTotal string
+	var highTotal string
+	var mediumTotal string
+	var lowTotal string
 	query := `
 	SELECT Host, ROUND(SUM(CVSS)) AS CVSS_Total,
 	SUM(CASE WHEN CVSS = 10 THEN 1 ELSE 0 END) AS Critical,
@@ -151,17 +157,20 @@ func topTenVulnHosts(conn *sql.DB, tableName string) {
 		fmt.Printf("Error running SQL Query. Error: %v\n", err)
 		os.Exit(4)
 	}
+	results := [][]string{}
 	for rows.Next() {
 		rows.Scan(&mostVulnHost, &cvssTotal, &criticalTotal, &severeTotal, &highTotal, &mediumTotal, &lowTotal)
-		fmt.Println(mostVulnHost, cvssTotal, criticalTotal, severeTotal, highTotal, mediumTotal, lowTotal)
+		rowValues := []string{mostVulnHost, cvssTotal, criticalTotal, severeTotal, highTotal, mediumTotal, lowTotal}
+		results = append(results, rowValues)
 	}
+	return results
 }
 
-func mostDangerousVulns(conn *sql.DB, tableName string) {
+func mostDangerousVulns(conn *sql.DB, tableName string) [][]string {
 	// Run the second query
 	var vulnName string
-	var cvssTotal int
-	var vulnsTotal int
+	var cvssTotal string
+	var vulnsTotal string
 	query := `
 	SELECT Name, CVSS, COUNT(*) AS Total
 	FROM !!
@@ -176,8 +185,71 @@ func mostDangerousVulns(conn *sql.DB, tableName string) {
 		fmt.Printf("Error running SQL Query. Error: %v\n", err)
 		os.Exit(4)
 	}
+	results := [][]string{}
 	for rows.Next() {
 		rows.Scan(&vulnName, &cvssTotal, &vulnsTotal)
-		fmt.Println(vulnName, cvssTotal, vulnsTotal)
+		rowValues := []string{vulnName, cvssTotal, vulnsTotal}
+		results = append(results, rowValues)
 	}
+	return results
+}
+
+func vulnByType(conn *sql.DB, tableName string) []string {
+	// Run the second query
+	var oracleCount string
+	var microsoftCount string
+	var sslCount string
+	var firefoxCount string
+	var smbCount string
+	var apacheCount string
+	var phpCount string
+	var adobeCount string
+	query := `
+	SELECT
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%Oracle%') AS Oracle,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%Microsoft%') AS Microsoft,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%SSL%' OR '%TLS%') AS SSL,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%Firefox%') AS Firefox,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%SMB%') AS SMB,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%Apache%') AS Apache,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%PHP%') AS PHP,
+	(SELECT COUNT(*) FROM !! WHERE Name LIKE '%Adobe%') AS Adobe
+	`
+	query = strings.Replace(query, "!!", tableName, -1)
+	rows, err := conn.Query(query)
+	if err != nil {
+		fmt.Printf("Error running SQL Query. Error: %v\n", err)
+		os.Exit(4)
+	}
+	for rows.Next() {
+		rows.Scan(&oracleCount, &microsoftCount, &sslCount, &firefoxCount, &smbCount, &apacheCount, &phpCount, &adobeCount)
+	}
+	results := []string{oracleCount, microsoftCount, sslCount, firefoxCount, smbCount, apacheCount, phpCount, adobeCount}
+	return results
+}
+
+func countCVSSYear(conn *sql.DB, tableName string) [][]string {
+	// Run the second query
+	var year string
+	var total string
+	query := `
+	SELECT SUBSTR(CVE,5,4) AS Year, COUNT(*) AS Total
+	FROM !!
+	WHERE CVE IS NOT ''
+	GROUP BY Year
+	ORDER BY Year DESC
+	`
+	query = strings.Replace(query, "!!", tableName, -1)
+	rows, err := conn.Query(query)
+	if err != nil {
+		fmt.Printf("Error running SQL Query. Error: %v\n", err)
+		os.Exit(4)
+	}
+	results := [][]string{}
+	for rows.Next() {
+		rows.Scan(&year, &total)
+		rowValues := []string{year, total}
+		results = append(results, rowValues)
+	}
+	return results
 }
