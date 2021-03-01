@@ -1,5 +1,6 @@
 # Nessus_Charts
 Nessus is an excellent vulnerability scanner but a HORRIBLE reporting tool.
+
 Hopefully this can make your life a *little* bit easier.
 
 ## Usage Instructions
@@ -12,7 +13,9 @@ For a list of the variables, simply run the binary with `-h`. This will also sho
 Relative file paths or full file paths are supported. If any of your options have spaces in them, be sure to enclose your option in "quotes".
 
 Here is a complete sample run for a Windows system:
-`nessus_charts.exe -csv="c:\Users\me\Downloads\Really big scan.csv" -sql=..\Documents\sqlite3_rocks.db -excel=Chart_Template.xlsx -table="External AWS Environment"`
+```
+nessus_charts.exe -csv="c:\Users\me\Downloads\Really big scan.csv" -sql=..\Documents\sqlite3_rocks.db -excel=Chart_Template.xlsx -table="External AWS Environment"
+```
 
 One last note, make sure to make your table names unique each time you run the program to avoid duplicate entries in a single table which could provide falsely high vulnerability data.
 
@@ -26,4 +29,5 @@ So, after spending hours with each CSV file from each scan we did in Nessus and 
 This simple tool solves this problem by reading your provided CSV, writing all those records to a SQLite database, running 5 SQL queries, and then writing the results to our template Excel doc which fills out some pre-built charts.
 
 If you have any questions, you can email us [here](mailto:security@tbconsulting.com)
+
 We would love to hear what else we can do to make this tool more helpful to you!

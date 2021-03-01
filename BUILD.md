@@ -9,9 +9,12 @@ Cross-compiling for Windows from Linux should be possible, but I could not get i
 
 According the cross-compile directions in the go-sqlite3 repo, you should be able to [cross compile](https://github.com/mattn/go-sqlite3#cross-compile).
 I first tried just using the standard method of `env GOOS=windows GOARCH=amd64 go build main.go`
+
 This did compile, but when I tested the resulting .exe on Windows, it was giving me erors about bindings because I was missing that CGO_ENABLED option mentioned above.
 So I then tried `env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build main.go`
+
 This would not compile. It was giving an error about unrecognized command line option ‘-mthreads’. I found the issue called out in the go-sqlite repo [Issue 303](https://github.com/mattn/go-sqlite3/issues/303)
+
 The fix identified was to install some gcc's and add some more command line options. That did not work for me.
 
 I decided it would be easier to just build in Windows. You will need a gcc installed. I tried a couple but the only one that actually worked was the one called out on the go-sqlite3 site... *image that* one day I will just read and make my life easier.
