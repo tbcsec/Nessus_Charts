@@ -60,6 +60,10 @@ func InsertDB(dbLocation string, tableName string, headers []string, values [][]
 	insertValueQuery = fmt.Sprintf(insertValueQuery, tableName, headersString, valueString)
 
 	// Insert the data
+	tx, err := database.Begin()
+	if err != nil {
+		fmt.Println(err)
+	}
 	fmt.Printf("Inserting data into database: %v table: %v\n", dbLocation, tableName)
 	rows := 0
 	for _, value := range values {
@@ -68,7 +72,7 @@ func InsertDB(dbLocation string, tableName string, headers []string, values [][]
 		for id := range value {
 			row[id] = value[id]
 		}
-		insertQuery, err := database.Prepare(insertValueQuery)
+		insertQuery, err := tx.Prepare(insertValueQuery)
 		if err != nil {
 			fmt.Printf("Error in inserting data into DB. Error: %v\n", err)
 			os.Exit(4)
@@ -77,6 +81,7 @@ func InsertDB(dbLocation string, tableName string, headers []string, values [][]
 		insertQuery.Exec(row...)
 		rows++
 	}
+	tx.Commit()
 	fmt.Printf("%v rows have been inserted into the table: %v\n", rows, tableName)
 }
 
