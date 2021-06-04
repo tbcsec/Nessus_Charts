@@ -53,7 +53,6 @@ func ProcessCSV(csvLocation string) ([]string, [][]string) {
 
 	// Pull out the header values
 	headers := records[0]
-	fmt.Println(headers)
 	// Strip down the CSV to only include required fields
 	strippedRecords := deleteHeader(records)
 	// Return the headers and CSV values
