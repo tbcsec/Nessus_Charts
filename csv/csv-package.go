@@ -26,7 +26,6 @@ func ProcessCSV(csvLocation string) ([]string, [][]string) {
 	requiredFields := []string{
 		"Plugin ID",
 		"CVE",
-		"CVSS",
 		"Risk",
 		"Host",
 		"Protocol",
@@ -39,14 +38,22 @@ func ProcessCSV(csvLocation string) ([]string, [][]string) {
 		"Plugin Output",
 	}
 	for _, requiredField := range requiredFields {
-		if checkRequiredFields(requiredField, records[0]) != true {
+		if !checkRequiredFields(requiredField, records[0]) {
 			fmt.Printf("Missing required field: %v\n", requiredField)
 			os.Exit(1)
 		}
 	}
 
+	// Replace the header value CVSS v3 with the just CVSS
+	for id, header := range records[0] {
+		if header == "CVSS v3.0 Base Score" {
+			records[0][id] = "CVSS"
+		}
+	}
+
 	// Pull out the header values
 	headers := records[0]
+	fmt.Println(headers)
 	// Strip down the CSV to only include required fields
 	strippedRecords := deleteHeader(records)
 	// Return the headers and CSV values
